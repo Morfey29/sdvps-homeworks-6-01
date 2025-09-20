@@ -50,6 +50,32 @@ spec:
 
 2. Запустите Deployment в своём кластере и добейтесь его стабильной работы.
 
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  labels:
+    app: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:6.0.13
+        ports:
+        - containerPort: 6379
+        command: ["redis-server"]
+        args: ["--requirepass", ""] 
+```
+
 
 ### Задание 3
 
@@ -61,6 +87,74 @@ spec:
  - просмотра логов контейнера за последние 5 минут;
  - удаления контейнера;
  - проброса порта локальной машины в контейнер для отладки.
+```
+Вот команды kubectl для работы с контейнером Redis из предыдущего задания:
+
+1. Выполнение команды ps aux внутри контейнера
+bash
+# Выполнить команду ps aux в контейнере redis
+kubectl exec deployment/redis-deployment -- ps aux
+
+# Если в поде несколько контейнеров, укажите конкретный
+kubectl exec deployment/redis-deployment -c redis -- ps aux
+
+# Альтернативный вариант - получить интерактивный shell
+kubectl exec deployment/redis-deployment -it -- /bin/bash
+# затем внутри контейнера: ps aux
+2. Просмотр логов контейнера за последние 5 минут
+bash
+# Логи за последние 5 минут
+kubectl logs deployment/redis-deployment --since=5m
+
+# С потоковым выводом (follow)
+kubectl logs deployment/redis-deployment --since=5m -f
+
+# Логи конкретного пода (если несколько реплик)
+kubectl logs -l app=redis --since=5m
+
+# С таймстампами
+kubectl logs deployment/redis-deployment --since=5m --timestamps
+3. Удаление контейнера (пода)
+bash
+# Удаление deployment (удалит все связанные pods)
+kubectl delete deployment redis-deployment
+
+# Удаление конкретного пода (если нужно удалить только один)
+kubectl delete pod -l app=redis
+
+# Принудительное удаление пода
+kubectl delete pod -l app=redis --force --grace-period=0
+4. Проброс порта локальной машины в контейнер для отладки
+bash
+# Проброс порта 6379 контейнера на localhost:6379
+kubectl port-forward deployment/redis-deployment 6379:6379
+
+# Проброс в фоновом режиме
+kubectl port-forward deployment/redis-deployment 6379:6379 &
+
+# Проброс на другой локальный порт
+kubectl port-forward deployment/redis-deployment 16379:6379
+
+# Проброс к конкретному поду
+kubectl port-forward pod/redis-deployment-xxxxx 6379:6379
+
+# После проброса можно подключиться с локальной машины:
+redis-cli -h localhost -p 6379
+Дополнительные полезные команды:
+bash
+# Проверить статус deployment
+kubectl get deployment redis-deployment
+
+# Описание deployment
+kubectl describe deployment redis-deployment
+
+# Список подов с меткой app=redis
+kubectl get pods -l app=redis
+
+# Перезапуск deployment (создаст новые pods)
+kubectl rollout restart deployment/redis-deployment
+Все команды предполагают, что deployment и сервис развернуты в namespace по умолчанию. Если используется другой namespace, добавьте флаг -n <namespace-name> к командам.
+```
 
 ### Задание 4
 
